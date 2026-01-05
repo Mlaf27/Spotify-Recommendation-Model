@@ -240,6 +240,10 @@ pip install pandas numpy scikit-learn matplotlib seaborn scipy
 Matthieu Lafont  
 Master of Management in Analytics - McGill University
 
+## Presetation Deck
+
+See the presentation deck Spotify Personalized Mood Based Playlist Generation.pptx
+
 ## Acknowledgments
 
 Dataset provided by Kaggle user Maharshi Pandya. This project was developed as part of coursework exploring machine learning applications in music recommendation systems.
