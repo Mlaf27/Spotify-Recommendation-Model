@@ -2,208 +2,132 @@
 
 This project showcases my skills in machine learning, specifically unsupervised learning through clustering techniques applied to music recommendation systems.
 
-## Project Overview
+## Main Objective
 
-Developed a machine learning system that generates personalized music playlists by combining mood detection with audio feature analysis. The system addresses a key limitation in current music streaming platforms: recommendations based primarily on artist similarity and popularity, rather than musical characteristics and emotional context.
+The primary objective of this project is to develop a personalized music recommendation system that addresses the limitations of current streaming platforms. Traditional recommendation algorithms focus on artist similarity and popularity, ignoring the underlying musical characteristics (tempo, energy, acousticness) and the user's current emotional state. This project creates a mood-based clustering system that recommends songs based on audio feature similarity and emotional context, enabling users to discover new music that matches both their taste and their current mood.
 
-## Problem Statement
-
-Current music recommendation systems have two major limitations:
-
-1. **Artist-Centric Recommendations**: Platforms recommend songs from similar or popular artists, ignoring the underlying musical characteristics that make songs sound alike.
-2. **Missing Emotional Context**: Existing algorithms don't account for the listener's current mood or emotional state when making recommendations.
-
-This results in generic suggestions that fail to match both the user's taste in musical features (tempo, energy, acousticness) and their current emotional needs.
-
-## Solution
-
-A two-level clustering system that recommends music based on:
-- **Musical similarity**: Songs with comparable audio features (BPM, energy levels, acousticness, danceability, valence)
-- **Mood alignment**: User's current emotional state as input for playlist generation
-- **Personalization**: Analysis of the user's existing library to understand their taste in musical characteristics
-
-The system discovers new music that sounds similar to what the user already enjoys, while matching their current mood.
-
-## Dataset
-
-**Source**: Kaggle Spotify Tracks Dataset (2022)
-
-**Size**: 114,000 tracks
-
-**Features**:
-- Track metadata (artist, album, track name, duration)
-- Audio features (danceability, energy, acousticness, instrumentalness, liveness, valence)
-- Musical properties (tempo, loudness, key, mode, time signature, speechiness)
-- Popularity and explicit content flags
-- Genre classification (114 unique genres)
-
-## Methodology
+## Project Steps
 
 ### Data Cleaning
 
-**Global Dataset Processing**:
-- Removed 32,000 duplicate tracks based on track name and primary artist
-- Handled 3 missing values in artist, album, and track name fields
-- Standardized text formatting (lowercase, whitespace trimming)
-- Validated feature ranges and removed invalid entries (negative duration/tempo, outliers in time signature)
-- Final clean dataset: ~82,000 unique tracks
+1. **Data Inspection:** Conducted exploratory analysis of 114,000 Spotify tracks with 21 audio features including danceability, energy, valence, acousticness, tempo, and genre classifications.
 
-**User Library Processing**:
-- Imported user's Spotify library from JSON export
-- Standardized text fields to match global dataset format
-- Removed 700 duplicates from personal library
-- Merged user library with global dataset on track name and artist
+2. **Data Preparation:** Executed comprehensive data cleaning including:
+   - Removed 32,000 duplicate tracks based on track name and primary artist
+   - Handled 3 missing values in artist, album, and track metadata
+   - Standardized text formatting (lowercase conversion, whitespace trimming)
+   - Removed invalid entries (tracks shorter than 90 seconds or longer than 15 minutes)
+   - Filtered tracks with invalid loudness values (clipping detection)
 
-### Feature Engineering
+3. **Feature Engineering:**
+   - Split composite artist column into individual artist fields (artist_1, artist_2, artist_3)
+   - Applied min-max scaling to tempo values
+   - Applied inverted min-max scaling to loudness (higher values = louder)
+   - Converted explicit content flag to binary format
 
-Minimal feature engineering was required as Spotify's audio features are well-structured:
+### Clustering Model
 
-1. **Tempo Normalization**: Applied min-max scaling to tempo values
-2. **Loudness Scaling**: Inverted min-max scaling for loudness (higher values = louder)
-3. **Artist Parsing**: Split composite artist fields (separated by ';') into individual artist columns
-4. **Binary Conversion**: Converted 'explicit' flag to binary format
+**K-Means Clustering** was selected over Hierarchical Clustering and DBSCAN based on four key criteria:
 
-### Model Selection: K-Means Clustering
+- **Speed and Scalability:** 600x faster than hierarchical clustering, essential for processing large datasets and enabling real-time recommendations
+- **Prediction Capability:** Only algorithm that can instantly predict cluster membership for new songs
+- **Geometric Fit:** Spherical clusters naturally match the geometry of audio feature space
+- **Production-Ready:** Supports two-level clustering architecture and enables efficient cosine similarity calculations
 
-Selected K-Means over Hierarchical Clustering and DBSCAN based on four key criteria:
+**Hyperparameter Tuning:** Used Elbow Method and Silhouette Score analysis to determine optimal number of clusters.
 
-**Speed and Scalability**:
-- 600x faster than hierarchical clustering
-- Essential for processing large datasets and real-time recommendations
+**Result:** K = 6 clusters identified as optimal
 
-**Prediction Capability**:
-- Only algorithm that can instantly predict cluster membership for new songs
-- Enables real-time playlist generation
-
-**Geometric Fit**:
-- Spherical clusters naturally match the geometry of audio feature space
-- Audio features exhibit clear centroid-based groupings
-
-**Production-Ready Architecture**:
-- Supports two-level clustering (main clusters + subclusters)
-- Centroids enable efficient cosine similarity calculations for recommendations
-- Scalable for continuous data ingestion
-
-### Hyperparameter Tuning
-
-Determined optimal number of clusters using two methods:
-
-**Elbow Method**: Analyzed within-cluster sum of squares (WCSS) across different k values
-
-**Silhouette Score**: Measured cluster cohesion and separation
-
-**Result**: Optimal k = 6 main mood clusters
+*Figure: Elbow Method and Silhouette Score for Optimal K Selection*
+![K-Means Optimization](image/elbow_silhouette.png)
 
 ### Two-Level Clustering Architecture
 
-**Level 1 - Main Mood Clusters (k=6)**:
+**Main Clustering (K=6):** Dataset organized into 6 distinct mood categories based on audio feature profiles:
 
-1. **Happy/Energetic** (25,335 tracks)
-   - Highest energy across all clusters
-   - High danceability
-   - Highest valence (cheerful, bright)
-   - Low acousticness (lively, upbeat)
+*Figure: Distribution of Songs Across Mood Clusters*
+![Cluster Distribution](image/cluster_distribution.png)
 
-2. **Warm/Feel-Good** (22,103 tracks)
-   - Medium-high energy
-   - Good danceability
-   - Moderately positive valence
-   - Moderate acousticness (warm, comfortable)
+- **Moody Energetic (5,223 tracks):** Medium-high energy, moderate danceability, low valence (emotionally darker), low acousticness
+- **Sad / Reflective (14,896 tracks):** Low energy, high acousticness (soft, intimate), lower valence, slightly higher speechiness
+- **Happy / Energetic (25,335 tracks):** Highest energy, high danceability, highest valence (cheerful), low acousticness
+- **Warm / Feel-Good (22,103 tracks):** Medium-high energy, good danceability, moderately positive valence, moderate acousticness
+- **Intense / Driven (5,734 tracks):** High energy, low valence (serious), low acousticness, very high instrumentalness
+- **Melancholy / Peaceful (5,206 tracks):** Lowest energy, highest acousticness, lowest valence, high instrumentalness
 
-3. **Sad/Reflective** (14,896 tracks)
-   - Low energy
-   - High acousticness (soft, intimate)
-   - Lower valence (emotional, wistful)
-   - Slightly higher speechiness (expressive)
+*Figure: Audio Feature Profiles for Each Mood Cluster*
+![Mood Profiles Radar](image/mood_profiles_radar.png)
 
-4. **Moody Energetic** (5,223 tracks)
-   - Medium-high energy
-   - Moderate danceability
-   - Low valence (emotionally darker)
-   - Low acousticness (tense, not warm)
-
-5. **Intense/Driven** (5,734 tracks)
-   - High energy
-   - Low valence (serious, not cheerful)
-   - Low acousticness (sharper, aggressive tone)
-   - Very high instrumentalness (focused)
-
-6. **Melancholy/Peaceful** (5,206 tracks)
-   - Lowest energy
-   - Highest acousticness
-   - Lowest valence (emotional heaviness)
-   - High instrumentalness (quiet, contemplative)
-
-**Level 2 - Subclustering for Personalization**:
-
-Applied size-based subclustering logic to each main cluster:
+**Subclustering for Personalization:** Applied size-based logic to create finer-grained segments:
 - Clusters with <10,000 tracks: No subclustering
-- Clusters with 10,000-20,000 tracks: 2 subclusters
-- Clusters with >20,000 tracks: 3 subclusters
+- Clusters with 10,000-20,000 tracks: Split into 2 subclusters
+- Clusters with >20,000 tracks: Split into 3 subclusters
 
-**Result**: 12 total micro-mood categories with 2,000-12,000 songs each
+**Result:** 12 total micro-mood categories with 2,000-12,000 songs each
 
-This enables more granular personalization while maintaining clear mood boundaries.
+*Figure: Subcluster Distribution Within Each Main Mood Cluster*
+![Subcluster Breakdown](image/subcluster_breakdown.png)
 
-## Operational Architecture
+### Recommendation System
 
-The system follows a four-stage pipeline:
+Built a content-based recommendation engine using:
+1. **User Input:** Mood selection from 6 categories
+2. **Library Analysis:** Matched user's Spotify library with global dataset to identify preferred audio feature patterns
+3. **Proportional Allocation:** Distributed recommendations across subclusters based on user's listening distribution
+4. **Similarity Ranking:** Used cosine similarity on audio features to rank candidate songs within each subcluster
 
-1. **Mood Selection**: User selects their current mood from the 6 main categories
-2. **Library Analysis**: System analyzes user's Spotify library to identify their preferred audio feature patterns
-3. **Cluster Matching**: User's songs are matched to appropriate subclusters within the selected mood
-4. **Recommendation Generation**: System recommends songs from the same subclusters, prioritizing those with high cosine similarity to the user's library based on audio features
+*Figure: Average Audio Features Across Mood Clusters*
+![Feature Heatmap](image/feature_heatmap.png)
 
-This architecture balances familiarity (songs matching user's taste) with discovery (new tracks within the mood category).
+## Results
 
-## Results and Analysis
+- **Clustering Model:** K-Means with K=6 successfully segmented 78,497 songs into distinct mood categories with clear audio feature differentiation
+- **Subclustering:** Created 12 micro-mood segments enabling fine-grained personalization while maintaining mood coherence
+- **Feature Analysis:** Identified strong negative correlation (-0.76) between energy and acousticness, and positive correlation (0.48) between danceability and valence
 
-**Successes**:
-- Successfully captured distinct mood categories through audio feature clustering
-- Two-level architecture enables both broad mood matching and fine-grained personalization
-- K-Means provided fast, scalable clustering suitable for production deployment
-- T-SNE visualization confirmed clear cluster separation
+*Figure: Audio Feature Correlation Matrix*
+![Feature Correlation](image/feature_correlation.png)
 
-**Key Insight**:
-Musical features alone capture mood effectively but have limitations in capturing subjective "taste." Two songs with nearly identical audio features (tempo, energy, acousticness) can still produce very different listener responses. This suggests that additional factors beyond Spotify's audio features influence music preference.
+## Key Insights
 
-**Challenges Identified**:
-- Personalizing recommendations based purely on audio features is more difficult than mood categorization
-- Feature similarity doesn't always translate to listener satisfaction
-- Need to balance feature-based recommendations with other preference signals
+**Mood Characterization:**
+- Energy and acousticness are the primary differentiators between upbeat and calm moods
+- Valence (positivity) separates happy/feel-good moods from sad/intense moods
+- Instrumentalness distinguishes focused/ambient music from vocal-driven tracks
 
-## Future Exploration
+**Clustering Performance:**
+- Clear separation between mood clusters validated through T-SNE visualization
+- Largest clusters (Happy/Energetic, Warm/Feel-Good) represent most common listening scenarios
+- Smaller clusters (Moody Energetic, Melancholy/Peaceful) capture niche but distinct emotional states
 
-**Enhancing Taste Personalization**:
-- Incorporate collaborative filtering to capture preference patterns beyond audio features
-- Add genre and artist preference weighting
-- Integrate listening history patterns (skip rate, replay frequency)
-- Consider social signals and contextual listening data
+**Limitation Identified:**
+- Musical features alone effectively capture mood but have limitations in capturing subjective "taste"
+- Two songs with nearly identical audio features can produce different listener responses
+- Recommendation accuracy depends heavily on the comprehensiveness of the user's library
 
-**Scalability Improvements**:
-- Implement incremental clustering for real-time dataset updates
-- Optimize similarity calculations using approximate nearest neighbors
-- Develop distributed processing for larger datasets
-- Create API endpoints for production deployment
+## Business Value and Applicability
+
+By providing music streaming platforms with a mood-based clustering framework and personalized recommendation engine, here are some valuable practical applications:
+
+* **Enhanced User Experience:** Users receive mood-appropriate recommendations that match both their emotional state and musical taste, reducing time spent searching for suitable music
+* **Discovery Engine:** System balances familiarity (songs matching user's audio preferences) with discovery (new artists with similar musical characteristics), encouraging platform engagement
+* **Playlist Automation:** Enables automated playlist generation based on mood context, reducing manual curation effort for users
+* **Strategic Insights:** Platform operators gain understanding of mood-based listening patterns, informing content acquisition, playlist curation, and marketing strategies
+* **Scalable Architecture:** Two-level clustering system can accommodate growing music catalogs while maintaining real-time recommendation performance
+
+*This system empowers streaming platforms to deliver a more intuitive, emotionally-aware music experience that adapts to users' current state while introducing them to new music aligned with their taste profile.*
+
+## Dataset Source
+
+The project utilizes the **Spotify Tracks Dataset (2022)** from Kaggle, containing 114,000 tracks with comprehensive audio features extracted from Spotify's API. Each track includes metadata (artist, album, track name) and audio features (danceability, energy, valence, acousticness, instrumentalness, liveness, speechiness, tempo, loudness, key, mode, time signature) along with popularity metrics and genre classifications.
 
 ## Technologies Used
 
 - Python 3.8+
-- scikit-learn (K-Means, StandardScaler, PCA, T-SNE)
+- scikit-learn (K-Means, StandardScaler, Silhouette Score)
 - pandas and numpy (data manipulation)
 - matplotlib and seaborn (visualization)
-- scipy (hierarchical clustering analysis)
-
-## Skills Demonstrated
-
-- Unsupervised learning (K-Means clustering)
-- Two-level hierarchical clustering architecture
-- Feature engineering and normalization
-- Hyperparameter optimization (Elbow method, Silhouette score)
-- Dimensionality reduction (T-SNE for visualization)
-- Large-scale data processing (114K records)
-- Production system design
-- Music information retrieval concepts
+- Gradio (interactive interface)
 
 ## Project Structure
 
@@ -213,22 +137,29 @@ spotify-mood-recommendation/
 ├── spotify_data_cleaning.ipynb          # Data cleaning and preprocessing
 ├── double_clustering_model.ipynb        # Clustering model and recommendations
 ├── README.md                            # Project documentation
-└── .gitignore                          # Git ignore file
+├── requirements.txt                     # Python dependencies
+├── .gitignore                          # Git ignore configuration
+│
+└── image/                              # Visualization assets
+    ├── cluster_distribution.png
+    ├── feature_heatmap.png
+    ├── mood_profiles_radar.png
+    ├── subcluster_breakdown.png
+    └── feature_correlation.png
 ```
 
 ## How to Run
 
 1. Install required packages:
 ```bash
-pip install pandas numpy scikit-learn matplotlib seaborn scipy
+pip install -r requirements.txt
 ```
 
-2. Download the Spotify dataset from Kaggle:
-   - [Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset)
+2. Download the Spotify dataset:
+   - [Spotify Tracks Dataset on Kaggle](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset)
 
 3. Export your Spotify library:
-   - Go to Spotify Account Settings
-   - Request your data download
+   - Go to Spotify Account Settings → Privacy → Download your data
    - Extract the JSON file containing your library
 
 4. Run the notebooks in order:
@@ -240,10 +171,6 @@ pip install pandas numpy scikit-learn matplotlib seaborn scipy
 Matthieu Lafont  
 Master of Management in Analytics - McGill University
 
-## Presetation Deck
-
-See the presentation deck Spotify Personalized Mood Based Playlist Generation.pptx
-
 ## Acknowledgments
 
-Dataset provided by Kaggle user Maharshi Pandya. This project was developed as part of coursework exploring machine learning applications in music recommendation systems.
+Dataset provided by Kaggle user Maharshi Pandya. This project demonstrates the application of unsupervised machine learning techniques to music recommendation systems.
